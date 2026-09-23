@@ -1,170 +1,128 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Resultados Elecciones 🗳️</title>
-<link rel="icon" type="image/png" href="logo.png">
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzIM_LWSnbePRLDPV4fPBKdVzivluPoG-JvGqF-tQV_2jaSX6RRSh_s33M6nZpuHtQ0fw/exec";
 
-<!-- Fuente moderna -->
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+let resumenChartInstance = null;
+let gradosChartInstance = null;
+let listaGanadoraNombre = "Sin votos registrados";
 
-<style>
-    :root { 
-        --azul-oscuro: #0A2342;
-        --azul-borde: #00AEEF;
-        --fondo: #F0F6FA;
+document.addEventListener("DOMContentLoaded", () => {
+    cargarDatos();
+});
+
+async function cargarDatos() {
+    const elemEstado = document.getElementById("estadoCarga");
+    try {
+        const response = await fetch(SCRIPT_URL);
+        const data = await response.json();
+        
+        if (elemEstado) {
+            elemEstado.style.display = "none";
+        }
+
+        procesarYGraficar(data);
+    } catch (error) {
+        console.error("Error al cargar datos:", error);
+        if (elemEstado) {
+            elemEstado.innerText = "❌ No se pudieron cargar los resultados. Verifica la conexión con Google Sheets.";
+            elemEstado.style.color = "#E74C3C";
+        }
+    }
+}
+
+function procesarYGraficar(data) {
+    if (!Array.isArray(data) || data.length === 0) {
+        const elemEstado = document.getElementById("estadoCarga");
+        if (elemEstado) {
+            elemEstado.innerText = "ℹ️ No hay votos registrados aún.";
+            elemEstado.style.display = "block";
+        }
+        return;
     }
 
-    body { 
-        font-family: 'Poppins', sans-serif;
-        background: var(--fondo);
-        margin: 0;
-        padding: 30px;
-        color: #444;
+    const conteoListas = {};
+    const conteoGrados = {};
+    const todasLasListas = new Set();
+    const todosLosGrados = ["Primero 1°", "Segundo 2°", "Tercero 3°", "Cuarto 4°", "Quinto 5°", "Sexto 6°"];
+
+    data.forEach(item => {
+        const voto = item.voto;
+        const grado = item.grado || "No especificado";
+
+        if (voto) {
+            conteoListas[voto] = (conteoListas[voto] || 0) + 1;
+            todasLasListas.add(voto);
+
+            if (!conteoGrados[grado]) conteoGrados[grado] = {};
+            conteoGrados[grado][voto] = (conteoGrados[grado][voto] || 0) + 1;
+        }
+    });
+
+    // Calcular Lista Ganadora
+    let maxVotos = 0;
+    Object.keys(conteoListas).forEach(lista => {
+        if (conteoListas[lista] > maxVotos) {
+            maxVotos = conteoListas[lista];
+            listaGanadoraNombre = `${lista} (${maxVotos} votos)`;
+        }
+    });
+
+    // Chart 1: Resumen General
+    const labelsTotales = Array.from(todasLasListas);
+    const valoresTotales = labelsTotales.map(l => conteoListas[l] || 0);
+
+    const ctxResumen = document.getElementById("resumenChart").getContext("2d");
+    if (resumenChartInstance) resumenChartInstance.destroy();
+
+    resumenChartInstance = new Chart(ctxResumen, {
+        type: 'bar',
+        data: {
+            labels: labelsTotales,
+            datasets: [{
+                label: 'Total Votos',
+                data: valoresTotales,
+                backgroundColor: ['#00AEEF', '#FFD700', '#2ECC71', '#E74C3C', '#9B59B6'],
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    // Chart 2: Participación por Grado
+    const arrayListas = Array.from(todasLasListas);
+    const colores = ['#00AEEF', '#FFD700', '#2ECC71', '#E74C3C', '#9B59B6'];
+
+    const datasetsGrados = arrayListas.map((lista, index) => ({
+        label: lista,
+        data: todosLosGrados.map(g => (conteoGrados[g] && conteoGrados[g][lista]) ? conteoGrados[g][lista] : 0),
+        backgroundColor: colores[index % colores.length],
+        borderRadius: 6
+    }));
+
+    const ctxGrados = document.getElementById("gradosChart").getContext("2d");
+    if (gradosChartInstance) gradosChartInstance.destroy();
+
+    gradosChartInstance = new Chart(ctxGrados, {
+        type: 'bar',
+        data: { labels: todosLosGrados, datasets: datasetsGrados },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+}
+
+function mostrarGanador() {
+    document.getElementById("winnerName").innerText = listaGanadoraNombre;
+    document.getElementById("winnerModal").style.display = "flex";
+    if (typeof confetti === "function") {
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
     }
+}
 
-    .dashboard-container {
-        max-width: 1100px;
-        margin: 0 auto;
-        background: white;
-        padding: 35px;
-        border-radius: 22px;
-        box-shadow: 0 12px 45px rgba(0,0,0,0.09);
-    }
-
-    h1 {
-        text-align: center;
-        color: var(--azul-oscuro);
-        font-size: 2.2em;
-        margin-bottom: 25px;
-        border-bottom: 3px solid var(--azul-borde);
-        padding-bottom: 12px;
-    }
-
-    h2 {
-        color: var(--azul-oscuro);
-        text-align: center;
-        margin-top: 35px;
-        margin-bottom: 15px;
-        font-weight: 600;
-    }
-
-    .btn-ganador {
-        background: #FFD700;
-        padding: 12px 25px;
-        border: none;
-        border-radius: 12px;
-        font-size: 1.2em;
-        font-weight: bold;
-        cursor: pointer;
-        display: block;
-        margin: 0 auto 25px auto;
-        box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-        transition: 0.3s;
-    }
-    .btn-ganador:hover { transform: scale(1.05); }
-
-    #winnerModal {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.65);
-        backdrop-filter: blur(4px);
-        justify-content: center;
-        align-items: center;
-        z-index: 9000;
-    }
-
-    .winnerBox {
-        background: white;
-        padding: 35px;
-        border-radius: 18px;
-        width: 420px;
-        text-align: center;
-        animation: popIn 0.4s ease-out forwards;
-    }
-
-    @keyframes popIn {
-        0% { transform: scale(0.7); opacity: 0; }
-        100% { transform: scale(1); opacity: 1; }
-    }
-
-    .winnerBox h2 { color: var(--azul-oscuro); font-size: 1.9rem; margin-bottom: 10px; }
-    .winnerBox button {
-        margin-top: 20px;
-        padding: 10px 22px;
-        background: var(--azul-borde);
-        border: none;
-        border-radius: 10px;
-        color: white;
-        cursor: pointer;
-        font-size: 1rem;
-        font-weight: 600;
-    }
-
-    /* Ajuste clave de dimensiones de gráficos */
-    .chart-container {
-        position: relative;
-        width: 100%;
-        min-height: 350px;
-        margin: 0 auto 30px auto;
-    }
-
-    #confettiCanvas {
-        position: fixed;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: 8999;
-    }
-
-    .estado-carga {
-        text-align: center;
-        font-size: 1.1rem;
-        color: #00AEEF;
-        font-weight: 600;
-        margin-bottom: 15px;
-    }
-</style>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-
-</head>
-<body>
-
-<div class="dashboard-container">
-    <h1>📊 Resultados de Votos</h1>
-
-    <div id="estadoCarga" class="estado-carga">⌛ Cargando votos desde Google Sheets...</div>
-
-    <button class="btn-ganador" onclick="mostrarGanador()">🎉 Ver Ganador</button>
-
-    <h2>🥇 Conteo Total de Votos por Lista</h2>
-    <div class="chart-container">
-        <canvas id="resumenChart"></canvas>
-    </div>
-
-    <hr style="border: 1px dashed #ccc; margin: 40px 0;">
-
-    <h2>🔎 Participación por Grado</h2>
-    <div class="chart-container">
-        <canvas id="gradosChart"></canvas>
-    </div>
-</div>
-
-<!-- MODAL GANADOR -->
-<div id="winnerModal">
-    <canvas id="confettiCanvas"></canvas>
-    <div class="winnerBox">
-        <h2 id="winnerName">Calculando...</h2>
-        <p style="font-size:1.2rem; margin:0;">🎊 ¡Felicidades a la lista ganadora!</p>
-        <button onclick="cerrarGanador()">Cerrar</button>
-    </div>
-</div>
-
-<script src="resultados.js"></script>
-</body>
-</html>
+function cerrarGanador() {
+    document.getElementById("winnerModal").style.display = "none";
+}
