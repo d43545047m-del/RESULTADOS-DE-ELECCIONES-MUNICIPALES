@@ -1,5 +1,5 @@
 // Reemplaza esta URL con el enlace CSV que copiaste en el Paso 1
-const CSV_URL = "PEGA_AQUI_TU_ENLACE_CSV_DE_GOOGLE_SHEETS";
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_gJ1gJ54IEkOTwi0c2RFLEyxB1csqydki1HplYBHEY6ujGK7uYEqd7r1VjxKdu6JO_djDiAQbg_wA/pub?output=csv";
 
 let resumenChartInstance = null;
 let gradosChartInstance = null;
