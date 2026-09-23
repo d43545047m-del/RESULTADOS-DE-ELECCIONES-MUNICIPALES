@@ -1,4 +1,5 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzIM_LWSnbePRLDPV4fPBKdVzivluPoG-JvGqF-tQV_2jaSX6RRSh_s33M6nZpuHtQ0fw/exec";
+// Reemplaza esta URL con el enlace CSV que copiaste en el Paso 1
+const CSV_URL = "PEGA_AQUI_TU_ENLACE_CSV_DE_GOOGLE_SHEETS";
 
 let resumenChartInstance = null;
 let gradosChartInstance = null;
@@ -11,21 +12,41 @@ document.addEventListener("DOMContentLoaded", () => {
 async function cargarDatos() {
     const elemEstado = document.getElementById("estadoCarga");
     try {
-        const response = await fetch(SCRIPT_URL);
-        const data = await response.json();
+        const response = await fetch(CSV_URL);
+        const csvText = await response.text();
         
-        if (elemEstado) {
-            elemEstado.style.display = "none";
-        }
+        if (elemEstado) elemEstado.style.display = "none";
 
+        const data = parseCSV(csvText);
         procesarYGraficar(data);
     } catch (error) {
         console.error("Error al cargar datos:", error);
         if (elemEstado) {
-            elemEstado.innerText = "❌ No se pudieron cargar los resultados. Verifica la conexión con Google Sheets.";
+            elemEstado.innerText = "❌ Error al conectar con Google Sheets. Verifica que la hoja esté publicada en la web.";
             elemEstado.style.color = "#E74C3C";
         }
     }
+}
+
+// Convertidor de CSV a Array de Objetos
+function parseCSV(text) {
+    const lines = text.trim().split("\n");
+    if (lines.length <= 1) return [];
+
+    const result = [];
+    for (let i = 1; i < lines.length; i++) {
+        const currentline = lines[i].split(",");
+        // Columna B (índice 1) = Grado | Columna C (índice 2) = Voto
+        if (currentline.length >= 3) {
+            const gradoVal = currentline[1] ? currentline[1].replace(/"/g, '').trim() : "No especificado";
+            const votoVal = currentline[2] ? currentline[2].replace(/"/g, '').trim() : "";
+            
+            if (votoVal && votoVal !== "-") {
+                result.push({ grado: gradoVal, voto: votoVal });
+            }
+        }
+    }
+    return result;
 }
 
 function procesarYGraficar(data) {
@@ -45,7 +66,7 @@ function procesarYGraficar(data) {
 
     data.forEach(item => {
         const voto = item.voto;
-        const grado = item.grado || "No especificado";
+        const grado = item.grado;
 
         if (voto) {
             conteoListas[voto] = (conteoListas[voto] || 0) + 1;
