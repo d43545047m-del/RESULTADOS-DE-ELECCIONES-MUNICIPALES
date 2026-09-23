@@ -103,10 +103,12 @@
         font-weight: 600;
     }
 
-    .chart-wrapper {
+    /* Ajuste clave de dimensiones de gráficos */
+    .chart-container {
         position: relative;
-        height: 380px;
-        margin-bottom: 40px;
+        width: 100%;
+        min-height: 350px;
+        margin: 0 auto 30px auto;
     }
 
     #confettiCanvas {
@@ -116,6 +118,14 @@
         height: 100%;
         pointer-events: none;
         z-index: 8999;
+    }
+
+    .estado-carga {
+        text-align: center;
+        font-size: 1.1rem;
+        color: #00AEEF;
+        font-weight: 600;
+        margin-bottom: 15px;
     }
 </style>
 
@@ -128,17 +138,19 @@
 <div class="dashboard-container">
     <h1>📊 Resultados de Votos</h1>
 
+    <div id="estadoCarga" class="estado-carga">⌛ Cargando votos desde Google Sheets...</div>
+
     <button class="btn-ganador" onclick="mostrarGanador()">🎉 Ver Ganador</button>
 
     <h2>🥇 Conteo Total de Votos por Lista</h2>
-    <div class="chart-wrapper">
+    <div class="chart-container">
         <canvas id="resumenChart"></canvas>
     </div>
 
     <hr style="border: 1px dashed #ccc; margin: 40px 0;">
 
     <h2>🔎 Participación por Grado</h2>
-    <div class="chart-wrapper">
+    <div class="chart-container">
         <canvas id="gradosChart"></canvas>
     </div>
 </div>
