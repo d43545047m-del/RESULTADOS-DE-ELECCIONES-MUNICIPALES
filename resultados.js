@@ -12,20 +12,20 @@ async function cargarDatos() {
     try {
         const response = await fetch(SCRIPT_URL);
         const data = await response.json();
-
         procesarYGraficar(data);
     } catch (error) {
-        console.error("Error al cargar los votos de Google Sheets:", error);
+        console.error("Error al cargar los datos:", error);
     }
 }
 
 function procesarYGraficar(data) {
+    if (!Array.isArray(data) || data.length === 0) return;
+
     const conteoListas = {};
-    const conteoGrados = {}; 
+    const conteoGrados = {};
     const todasLasListas = new Set();
     const todosLosGrados = ["Primero 1°", "Segundo 2°", "Tercero 3°", "Cuarto 4°", "Quinto 5°", "Sexto 6°"];
 
-    // Procesar filas de Google Sheets
     data.forEach(item => {
         const voto = item.voto;
         const grado = item.grado || "No especificado";
@@ -39,7 +39,7 @@ function procesarYGraficar(data) {
         }
     });
 
-    // Determinar la lista ganadora
+    // Calcular Lista Ganadora
     let maxVotos = 0;
     Object.keys(conteoListas).forEach(lista => {
         if (conteoListas[lista] > maxVotos) {
@@ -48,7 +48,7 @@ function procesarYGraficar(data) {
         }
     });
 
-    // 1. Gráfico Total de Votos
+    // Chart 1: Resumen General
     const labelsTotales = Array.from(todasLasListas);
     const valoresTotales = labelsTotales.map(l => conteoListas[l] || 0);
 
@@ -60,7 +60,7 @@ function procesarYGraficar(data) {
         data: {
             labels: labelsTotales,
             datasets: [{
-                label: 'Total de Votos',
+                label: 'Total Votos',
                 data: valoresTotales,
                 backgroundColor: ['#00AEEF', '#FFD700', '#2ECC71', '#E74C3C', '#9B59B6'],
                 borderRadius: 8
@@ -69,33 +69,27 @@ function procesarYGraficar(data) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
             scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
         }
     });
 
-    // 2. Gráfico por Grado
+    // Chart 2: Participación por Grado
     const arrayListas = Array.from(todasLasListas);
     const colores = ['#00AEEF', '#FFD700', '#2ECC71', '#E74C3C', '#9B59B6'];
-    
-    const datasetsGrados = arrayListas.map((lista, index) => {
-        return {
-            label: lista,
-            data: todosLosGrados.map(g => (conteoGrados[g] && conteoGrados[g][lista]) ? conteoGrados[g][lista] : 0),
-            backgroundColor: colores[index % colores.length],
-            borderRadius: 6
-        };
-    });
+
+    const datasetsGrados = arrayListas.map((lista, index) => ({
+        label: lista,
+        data: todosLosGrados.map(g => (conteoGrados[g] && conteoGrados[g][lista]) ? conteoGrados[g][lista] : 0),
+        backgroundColor: colores[index % colores.length],
+        borderRadius: 6
+    }));
 
     const ctxGrados = document.getElementById("gradosChart").getContext("2d");
     if (gradosChartInstance) gradosChartInstance.destroy();
 
     gradosChartInstance = new Chart(ctxGrados, {
         type: 'bar',
-        data: {
-            labels: todosLosGrados,
-            datasets: datasetsGrados
-        },
+        data: { labels: todosLosGrados, datasets: datasetsGrados },
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -106,16 +100,9 @@ function procesarYGraficar(data) {
 
 function mostrarGanador() {
     document.getElementById("winnerName").innerText = listaGanadoraNombre;
-    const modal = document.getElementById("winnerModal");
-    modal.style.display = "flex";
-
-    // Efecto Confeti
+    document.getElementById("winnerModal").style.display = "flex";
     if (typeof confetti === "function") {
-        confetti({
-            particleCount: 100,
-            spread: 70,
-            origin: { y: 0.6 }
-        });
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
     }
 }
 
