@@ -1,9 +1,29 @@
-// Reemplaza esta URL con el enlace CSV que copiaste en el Paso 1
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_gJ1gJ54IEkOTwi0c2RFLEyxB1csqydki1HplYBHEY6ujGK7uYEqd7r1VjxKdu6JO_djDiAQbg_wA/pub?output=csv";
+// Enlace CSV de tu Google Sheet
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_gJ1gJ54IEkOTwiOc2RFLEyxB1csqydki1HpIYBHEY6ujGK7uYEqd7r1VjxKdu6JO_djDiAQbg_wA/pub?output=csv";
 
 let resumenChartInstance = null;
 let gradosChartInstance = null;
 let listaGanadoraNombre = "Sin votos registrados";
+
+// DICCIONARIO DE EQUIVALENCIAS (Convierte nombres antiguos a los nuevos)
+function normalizarNombreLista(votoOriginal) {
+    if (!votoOriginal) return "";
+    
+    const texto = votoOriginal.trim().toLowerCase();
+
+    // Mapeo a las 3 nuevas candidaturas
+    if (texto.includes("progreso") || texto.includes("lista 1") || texto.includes("todas las sangres")) {
+        return "Lista 1: Progreso Estudiantil";
+    }
+    if (texto.includes("auren") || texto.includes("lista 2") || texto.includes("líderes en acción") || texto.includes("lideres")) {
+        return "Lista 2: Auren Modelista";
+    }
+    if (texto.includes("cambio") || texto.includes("lista 3") || texto.includes("alianza e identidad") || texto.includes("juventud modelo")) {
+        return "Lista 3: Somos el Cambio";
+    }
+
+    return votoOriginal; // Retorna el texto tal cual si no coincide con las reglas anteriores
+}
 
 document.addEventListener("DOMContentLoaded", () => {
     cargarDatos();
@@ -36,11 +56,14 @@ function parseCSV(text) {
     const result = [];
     for (let i = 1; i < lines.length; i++) {
         const currentline = lines[i].split(",");
-        // Columna B (índice 1) = Grado | Columna C (índice 2) = Voto
+        // Columna B (index 1) = Grado | Columna C (index 2) = Voto
         if (currentline.length >= 3) {
             const gradoVal = currentline[1] ? currentline[1].replace(/"/g, '').trim() : "No especificado";
-            const votoVal = currentline[2] ? currentline[2].replace(/"/g, '').trim() : "";
+            const votoBruto = currentline[2] ? currentline[2].replace(/"/g, '').trim() : "";
             
+            // Transformar el nombre antiguo al nuevo
+            const votoVal = normalizarNombreLista(votoBruto);
+
             if (votoVal && votoVal !== "-") {
                 result.push({ grado: gradoVal, voto: votoVal });
             }
@@ -61,7 +84,17 @@ function procesarYGraficar(data) {
 
     const conteoListas = {};
     const conteoGrados = {};
-    const todasLasListas = new Set();
+    
+    // Fijamos las 3 listas oficiales
+    const todasLasListas = [
+        "Lista 1: Progreso Estudiantil",
+        "Lista 2: Auren Modelista",
+        "Lista 3: Somos el Cambio"
+    ];
+    
+    // Inicializar contadores en 0
+    todasLasListas.forEach(l => conteoListas[l] = 0);
+
     const todosLosGrados = ["Primero 1°", "Segundo 2°", "Tercero 3°", "Cuarto 4°", "Quinto 5°", "Sexto 6°"];
 
     data.forEach(item => {
@@ -70,7 +103,6 @@ function procesarYGraficar(data) {
 
         if (voto) {
             conteoListas[voto] = (conteoListas[voto] || 0) + 1;
-            todasLasListas.add(voto);
 
             if (!conteoGrados[grado]) conteoGrados[grado] = {};
             conteoGrados[grado][voto] = (conteoGrados[grado][voto] || 0) + 1;
@@ -78,8 +110,8 @@ function procesarYGraficar(data) {
     });
 
     // Calcular Lista Ganadora
-    let maxVotos = 0;
-    Object.keys(conteoListas).forEach(lista => {
+    let maxVotos = -1;
+    todasLasListas.forEach(lista => {
         if (conteoListas[lista] > maxVotos) {
             maxVotos = conteoListas[lista];
             listaGanadoraNombre = `${lista} (${maxVotos} votos)`;
@@ -87,8 +119,7 @@ function procesarYGraficar(data) {
     });
 
     // Chart 1: Resumen General
-    const labelsTotales = Array.from(todasLasListas);
-    const valoresTotales = labelsTotales.map(l => conteoListas[l] || 0);
+    const valoresTotales = todasLasListas.map(l => conteoListas[l] || 0);
 
     const ctxResumen = document.getElementById("resumenChart").getContext("2d");
     if (resumenChartInstance) resumenChartInstance.destroy();
@@ -96,11 +127,11 @@ function procesarYGraficar(data) {
     resumenChartInstance = new Chart(ctxResumen, {
         type: 'bar',
         data: {
-            labels: labelsTotales,
+            labels: todasLasListas,
             datasets: [{
                 label: 'Total Votos',
                 data: valoresTotales,
-                backgroundColor: ['#00AEEF', '#FFD700', '#2ECC71', '#E74C3C', '#9B59B6'],
+                backgroundColor: ['#00AEEF', '#FFD700', '#E74C3C'],
                 borderRadius: 8
             }]
         },
@@ -112,10 +143,9 @@ function procesarYGraficar(data) {
     });
 
     // Chart 2: Participación por Grado
-    const arrayListas = Array.from(todasLasListas);
-    const colores = ['#00AEEF', '#FFD700', '#2ECC71', '#E74C3C', '#9B59B6'];
+    const colores = ['#00AEEF', '#FFD700', '#E74C3C'];
 
-    const datasetsGrados = arrayListas.map((lista, index) => ({
+    const datasetsGrados = todasLasListas.map((lista, index) => ({
         label: lista,
         data: todosLosGrados.map(g => (conteoGrados[g] && conteoGrados[g][lista]) ? conteoGrados[g][lista] : 0),
         backgroundColor: colores[index % colores.length],
