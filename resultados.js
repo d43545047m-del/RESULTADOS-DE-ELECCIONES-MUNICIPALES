@@ -1,14 +1,14 @@
-// Enlace CSV de tu Google Sheet
+// Enlace CSV público de Google Sheets
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_gJ1gJ54IEkOTwiOc2RFLEyxB1csqydki1HpIYBHEY6ujGK7uYEqd7r1VjxKdu6JO_djDiAQbg_wA/pub?output=csv";
 
 let resumenChartInstance = null;
 let gradosChartInstance = null;
 let listaGanadoraNombre = "Sin votos registrados";
 
-// Normalización ultra flexible
+// Normalizador flexible de listas
 function normalizarNombreLista(votoOriginal) {
     if (!votoOriginal) return "";
-    const texto = votoOriginal.toString().toLowerCase();
+    const texto = votoOriginal.toString().trim().toLowerCase();
 
     if (texto.includes("progreso") || texto.includes("lista 1")) return "Lista 1: Progreso Estudiantil";
     if (texto.includes("auren") || texto.includes("lista 2")) return "Lista 2: Auren Modelista";
@@ -22,27 +22,40 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function cargarDatos() {
+    const elemEstado = document.getElementById("estadoCarga");
     try {
         const response = await fetch(CSV_URL);
+        if (!response.ok) throw new Error("No se pudo obtener el CSV");
+        
         const csvText = await response.text();
+        
+        // Ocultar el mensaje de carga al recibir respuesta
+        if (elemEstado) elemEstado.style.display = "none";
+
         const data = parseCSV(csvText);
         procesarYGraficar(data);
     } catch (error) {
         console.error("Error al cargar datos:", error);
+        if (elemEstado) {
+            elemEstado.innerText = "❌ Error al conectar con Google Sheets. Verifica que el archivo siga publicado como CSV.";
+            elemEstado.style.color = "#E74C3C";
+        }
     }
 }
 
 function parseCSV(text) {
-    const lines = text.trim().split("\n");
+    const lines = text.trim().split(/\r?\n/);
     if (lines.length <= 1) return [];
 
     const result = [];
     for (let i = 1; i < lines.length; i++) {
-        // Limpiar comillas y dividir por comas
-        const currentline = lines[i].replace(/"/g, '').split(",");
-        if (currentline.length >= 2) {
-            const gradoVal = currentline[1] ? currentline[1].trim() : "No especificado";
-            const votoBruto = currentline[2] ? currentline[2].trim() : (currentline[1] ? currentline[1].trim() : "");
+        // Limpiar comillas dobles y separar campos
+        const row = lines[i].replace(/"/g, '').split(",");
+        
+        // Columna B (índice 1) = Grado | Columna C (índice 2) = Voto
+        if (row.length >= 2) {
+            const gradoVal = row[1] ? row[1].trim() : "No especificado";
+            const votoBruto = row[2] ? row[2].trim() : (row[1] ? row[1].trim() : "");
             
             const votoVal = normalizarNombreLista(votoBruto);
             if (votoVal) {
@@ -72,7 +85,7 @@ function procesarYGraficar(data) {
         }
     });
 
-    // Determinar ganador
+    // Determinar la lista ganadora
     let maxVotos = -1;
     todasLasListas.forEach(lista => {
         if (conteoListas[lista] > maxVotos) {
@@ -81,7 +94,7 @@ function procesarYGraficar(data) {
         }
     });
 
-    // Gráfico 1: Resumen
+    // Gráfico 1: Resumen General
     const ctxResumen = document.getElementById("resumenChart");
     if (ctxResumen) {
         if (resumenChartInstance) resumenChartInstance.destroy();
@@ -104,7 +117,7 @@ function procesarYGraficar(data) {
         });
     }
 
-    // Gráfico 2: Por Grado
+    // Gráfico 2: Participación por Grado
     const ctxGrados = document.getElementById("gradosChart");
     if (ctxGrados) {
         if (gradosChartInstance) gradosChartInstance.destroy();
