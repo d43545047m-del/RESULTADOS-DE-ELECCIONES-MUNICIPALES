@@ -1,11 +1,11 @@
-// Enlace CSV público de Google Sheets
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_gJ1gJ54IEkOTwiOc2RFLEyxB1csqydki1HpIYBHEY6ujGK7uYEqd7r1VjxKdu6JO_djDiAQbg_wA/pub?output=csv";
+// URL directa exportada como CSV desde tu Google Sheet
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_gJ1gJ54IEkOTwi0c2RFLEyxB1csqydki1HplYBHEY6ujGK7uYEqd7r1VjxKdu6JO_djDiAQbg_wA/pub?output=csv";
 
 let resumenChartInstance = null;
 let gradosChartInstance = null;
 let listaGanadoraNombre = "Sin votos registrados";
 
-// Normalizador flexible de listas
+// Normalización flexible para mapear votos
 function normalizarNombreLista(votoOriginal) {
     if (!votoOriginal) return "";
     const texto = votoOriginal.toString().trim().toLowerCase();
@@ -29,7 +29,7 @@ async function cargarDatos() {
         
         const csvText = await response.text();
         
-        // Ocultar el mensaje de carga al recibir respuesta
+        // Ocultar mensaje de carga
         if (elemEstado) elemEstado.style.display = "none";
 
         const data = parseCSV(csvText);
@@ -37,22 +37,22 @@ async function cargarDatos() {
     } catch (error) {
         console.error("Error al cargar datos:", error);
         if (elemEstado) {
-            elemEstado.innerText = "❌ Error al conectar con Google Sheets. Verifica que el archivo siga publicado como CSV.";
+            elemEstado.innerText = "❌ Error al conectar con Google Sheets. Verifica tu conexión.";
             elemEstado.style.color = "#E74C3C";
         }
     }
 }
 
+// Lector y limpiador de CSV
 function parseCSV(text) {
     const lines = text.trim().split(/\r?\n/);
     if (lines.length <= 1) return [];
 
     const result = [];
     for (let i = 1; i < lines.length; i++) {
-        // Limpiar comillas dobles y separar campos
+        // Eliminar comillas extras y separar valores por comas
         const row = lines[i].replace(/"/g, '').split(",");
         
-        // Columna B (índice 1) = Grado | Columna C (índice 2) = Voto
         if (row.length >= 2) {
             const gradoVal = row[1] ? row[1].trim() : "No especificado";
             const votoBruto = row[2] ? row[2].trim() : (row[1] ? row[1].trim() : "");
@@ -85,7 +85,7 @@ function procesarYGraficar(data) {
         }
     });
 
-    // Determinar la lista ganadora
+    // Determinar ganador
     let maxVotos = -1;
     todasLasListas.forEach(lista => {
         if (conteoListas[lista] > maxVotos) {
@@ -94,7 +94,7 @@ function procesarYGraficar(data) {
         }
     });
 
-    // Gráfico 1: Resumen General
+    // Gráfico 1: Conteo Total
     const ctxResumen = document.getElementById("resumenChart");
     if (ctxResumen) {
         if (resumenChartInstance) resumenChartInstance.destroy();
