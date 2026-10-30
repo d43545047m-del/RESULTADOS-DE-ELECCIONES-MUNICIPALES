@@ -103,21 +103,12 @@
         font-weight: 600;
     }
 
-    /* Ajuste clave de dimensiones de gráficos */
+    /* Corrección de altura para evitar colapso de Chart.js */
     .chart-container {
         position: relative;
         width: 100%;
-        min-height: 350px;
+        height: 400px; /* Altura explícita para renderizar el canvas */
         margin: 0 auto 30px auto;
-    }
-
-    #confettiCanvas {
-        position: fixed;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: 8999;
     }
 
     .estado-carga {
@@ -157,7 +148,6 @@
 
 <!-- MODAL GANADOR -->
 <div id="winnerModal">
-    <canvas id="confettiCanvas"></canvas>
     <div class="winnerBox">
         <h2 id="winnerName">Calculando...</h2>
         <p style="font-size:1.2rem; margin:0;">🎊 ¡Felicidades a la lista ganadora!</p>
