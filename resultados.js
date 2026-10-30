@@ -85,14 +85,27 @@ function procesarYGraficar(data) {
         }
     });
 
-    // Determinar ganador
-    let maxVotos = -1;
+    // LÓGICA REVISADA: Determinar ganador o empate
+    let maxVotos = 0;
+    let ganadores = [];
+
     todasLasListas.forEach(lista => {
-        if (conteoListas[lista] > maxVotos) {
-            maxVotos = conteoListas[lista];
-            listaGanadoraNombre = `${lista} (${maxVotos} votos)`;
+        const votos = conteoListas[lista];
+        if (votos > maxVotos) {
+            maxVotos = votos;
+            ganadores = [lista]; // Hay un nuevo líder
+        } else if (votos === maxVotos && votos > 0) {
+            ganadores.push(lista); // Empate en primer lugar
         }
     });
+
+    if (maxVotos === 0) {
+        listaGanadoraNombre = "Sin votos registrados aún";
+    } else if (ganadores.length === 1) {
+        listaGanadoraNombre = `${ganadores[0]} (${maxVotos} votos)`;
+    } else {
+        listaGanadoraNombre = `🤝 Empate entre: ${ganadores.join(" / ")} (${maxVotos} votos c/u)`;
+    }
 
     // Gráfico 1: Conteo Total
     const ctxResumen = document.getElementById("resumenChart");
