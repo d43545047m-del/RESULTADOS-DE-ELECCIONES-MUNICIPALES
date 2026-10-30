@@ -5,24 +5,24 @@ let resumenChartInstance = null;
 let gradosChartInstance = null;
 let listaGanadoraNombre = "Sin votos registrados";
 
-// DICCIONARIO DE EQUIVALENCIAS (Convierte nombres antiguos a los nuevos)
+// DICCIONARIO DE EQUIVALENCIAS FLEXIBLE
 function normalizarNombreLista(votoOriginal) {
     if (!votoOriginal) return "";
     
     const texto = votoOriginal.trim().toLowerCase();
 
-    // Mapeo a las 3 nuevas candidaturas
-    if (texto.includes("progreso") || texto.includes("lista 1") || texto.includes("todas las sangres")) {
+    // Detección por palabra clave o número de lista
+    if (texto.includes("progreso") || texto.includes("lista 1")) {
         return "Lista 1: Progreso Estudiantil";
     }
-    if (texto.includes("auren") || texto.includes("lista 2") || texto.includes("líderes en acción") || texto.includes("lideres")) {
+    if (texto.includes("auren") || texto.includes("lista 2")) {
         return "Lista 2: Auren Modelista";
     }
-    if (texto.includes("cambio") || texto.includes("lista 3") || texto.includes("alianza e identidad") || texto.includes("juventud modelo")) {
+    if (texto.includes("cambio") || texto.includes("lista 3")) {
         return "Lista 3: Somos el Cambio";
     }
 
-    return votoOriginal; // Retorna el texto tal cual si no coincide con las reglas anteriores
+    return "";
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -61,119 +61,8 @@ function parseCSV(text) {
             const gradoVal = currentline[1] ? currentline[1].replace(/"/g, '').trim() : "No especificado";
             const votoBruto = currentline[2] ? currentline[2].replace(/"/g, '').trim() : "";
             
-            // Transformar el nombre antiguo al nuevo
+            // Normalizar el texto del voto
             const votoVal = normalizarNombreLista(votoBruto);
 
             if (votoVal && votoVal !== "-") {
-                result.push({ grado: gradoVal, voto: votoVal });
-            }
-        }
-    }
-    return result;
-}
-
-function procesarYGraficar(data) {
-    if (!Array.isArray(data) || data.length === 0) {
-        const elemEstado = document.getElementById("estadoCarga");
-        if (elemEstado) {
-            elemEstado.innerText = "ℹ️ No hay votos registrados aún.";
-            elemEstado.style.display = "block";
-        }
-        return;
-    }
-
-    const conteoListas = {};
-    const conteoGrados = {};
-    
-    // Fijamos las 3 listas oficiales
-    const todasLasListas = [
-        "Lista 1: Progreso Estudiantil",
-        "Lista 2: Auren Modelista",
-        "Lista 3: Somos el Cambio"
-    ];
-    
-    // Inicializar contadores en 0
-    todasLasListas.forEach(l => conteoListas[l] = 0);
-
-    const todosLosGrados = ["Primero 1°", "Segundo 2°", "Tercero 3°", "Cuarto 4°", "Quinto 5°", "Sexto 6°"];
-
-    data.forEach(item => {
-        const voto = item.voto;
-        const grado = item.grado;
-
-        if (voto) {
-            conteoListas[voto] = (conteoListas[voto] || 0) + 1;
-
-            if (!conteoGrados[grado]) conteoGrados[grado] = {};
-            conteoGrados[grado][voto] = (conteoGrados[grado][voto] || 0) + 1;
-        }
-    });
-
-    // Calcular Lista Ganadora
-    let maxVotos = -1;
-    todasLasListas.forEach(lista => {
-        if (conteoListas[lista] > maxVotos) {
-            maxVotos = conteoListas[lista];
-            listaGanadoraNombre = `${lista} (${maxVotos} votos)`;
-        }
-    });
-
-    // Chart 1: Resumen General
-    const valoresTotales = todasLasListas.map(l => conteoListas[l] || 0);
-
-    const ctxResumen = document.getElementById("resumenChart").getContext("2d");
-    if (resumenChartInstance) resumenChartInstance.destroy();
-
-    resumenChartInstance = new Chart(ctxResumen, {
-        type: 'bar',
-        data: {
-            labels: todasLasListas,
-            datasets: [{
-                label: 'Total Votos',
-                data: valoresTotales,
-                backgroundColor: ['#00AEEF', '#FFD700', '#E74C3C'],
-                borderRadius: 8
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-        }
-    });
-
-    // Chart 2: Participación por Grado
-    const colores = ['#00AEEF', '#FFD700', '#E74C3C'];
-
-    const datasetsGrados = todasLasListas.map((lista, index) => ({
-        label: lista,
-        data: todosLosGrados.map(g => (conteoGrados[g] && conteoGrados[g][lista]) ? conteoGrados[g][lista] : 0),
-        backgroundColor: colores[index % colores.length],
-        borderRadius: 6
-    }));
-
-    const ctxGrados = document.getElementById("gradosChart").getContext("2d");
-    if (gradosChartInstance) gradosChartInstance.destroy();
-
-    gradosChartInstance = new Chart(ctxGrados, {
-        type: 'bar',
-        data: { labels: todosLosGrados, datasets: datasetsGrados },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-        }
-    });
-}
-
-function mostrarGanador() {
-    document.getElementById("winnerName").innerText = listaGanadoraNombre;
-    document.getElementById("winnerModal").style.display = "flex";
-    if (typeof confetti === "function") {
-        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-    }
-}
-
-function cerrarGanador() {
-    document.getElementById("winnerModal").style.display = "none";
-}
+                result.push({ grado: gradoVal,
